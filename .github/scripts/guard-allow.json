@@ -1,0 +1,14 @@
+{
+  "emails": [
+    "@users\\.noreply\\.github\\.com$",
+    "^noreply@anthropic\\.com$",
+    "@example\\.[a-z]+$",
+    "^hoainho\\.work@gmail\\.com$",
+    "@odata\\."
+  ],
+  "contains": [
+    { "file": ".agents/skills/three-js/integrations/glb_character_pipeline/node/capture-character.mjs", "text": "/Users/tamlh/" }
+  ],
+  "allowedBinaryExt": [".png"],
+  "maxFileBytes": 5242880
+}

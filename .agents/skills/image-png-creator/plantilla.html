@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1000" />
+  <title>Título de la pieza</title>
+  <!--
+    FICHA — cada texto de esta imagen y su fuente (reglas en SKILL.md de image-png-creator).
+    texto                                   | fuente
+    Título de la pieza                      | usuario
+    Dato con número (0,5–0,8 g)             | doc: ruta/al/archivo.md §1.1
+    Cerrar bien la tapa                     | agregado
+    Render: node <carpeta de image-png-creator>/scripts/render.mjs <este archivo> --ancho 1000 --escala 2
+  -->
+  <style>
+    :root {
+      /* Paleta del dominio (DISENO.md). --ancho debe ser el mismo --ancho que recibe render.mjs. */
+      --p: #059669; --p-osc: #047857; --p-luz: #10b981; --p-fondo: #ecfdf5;
+      --ancho: 1000px;
+      --ink: #0f172a; --muted: #475569; --line: #e2e8f0; --bg: #f8fafc; --card: #ffffff;
+      --sky: #0369a1; --sky-bg: #f0f9ff; --sky-line: #bae6fd;
+      --red: #991b1b; --red-ink: #7f1d1d; --red-bg: #fef2f2; --red-line: #fca5a5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: var(--ancho); background: var(--bg); color: var(--ink);
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; line-height: 1.4;
+    }
+    svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    svg.s { width: 18px; height: 18px; }
+
+    /* Cabecera: banda de color con emblema, título, bajada, etiqueta y objeto */
+    .cabecera {
+      background: linear-gradient(100deg, var(--p-osc), var(--p) 60%, var(--p-luz));
+      color: #fff; padding: 30px 44px; display: flex; align-items: center; gap: 22px;
+    }
+    .cabecera h1 { font-size: 31px; font-weight: 800; letter-spacing: .01em; text-transform: uppercase; }
+    .cabecera .bajada { font-size: 15px; opacity: .95; margin-top: 4px; }
+    .cabecera .etiqueta {
+      display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.45); padding: 3px 10px; border-radius: 999px;
+    }
+    .cabecera .crece { flex: 1; }
+    .cabecera svg.emblema { width: 58px; height: 58px; stroke-width: 1.6; }
+
+    main { padding: 26px 44px 18px; }
+    h2 {
+      display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 800; text-transform: uppercase;
+      border-left: 5px solid var(--p); padding-left: 14px; margin: 22px 0 12px;
+    }
+    main > h2:first-child { margin-top: 4px; }
+    .nota { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+    /* Etiquetas en dos columnas, una tinta por etiqueta */
+    .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .chip { text-align: center; font-weight: 700; font-size: 15px; padding: 8px; border-radius: 8px; border: 1.5px solid; }
+    .t1 { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+    .t2 { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    .t3 { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+    .t4 { background: #f3e8ff; border-color: #e9d5ff; color: #6b21a8; }
+
+    /* Tarjetas en tres columnas (cantidades, opciones, niveles) */
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .card { background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 14px; }
+    .card h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--p-osc);
+               background: var(--p-fondo); border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; }
+    .dato { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .punto { border-radius: 50%; flex-shrink: 0; }
+    .card p { font-size: 13.5px; color: var(--muted); }
+
+    /* Barra destacada: la regla que todos deben leer */
+    .barra {
+      margin-top: 12px; border: 1.5px solid #86efac; background: #f0fdf4; border-radius: 10px;
+      padding: 10px 14px; font-size: 14.5px; color: #14532d; display: flex; gap: 10px; align-items: flex-start;
+    }
+    .barra b { color: #065f46; }
+
+    /* Pasos numerados */
+    .paso h3 { display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: var(--ink); background: none; padding: 0; margin-bottom: 6px; }
+    .num { width: 26px; height: 26px; border-radius: 50%; background: var(--p); color: #fff;
+           font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* Caja informativa en dos columnas (conservación, requisitos, horarios) */
+    .info { background: var(--sky-bg); border: 1.5px solid var(--sky-line); border-radius: 10px;
+            padding: 14px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 26px; }
+    .info h3 { display: flex; align-items: center; gap: 8px; font-size: 15.5px; color: var(--sky); margin-bottom: 3px; }
+    .info p { font-size: 13.5px; color: #334155; }
+
+    /* Advertencias en 2 × 2 */
+    .avisos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .aviso { background: var(--red-bg); border: 1.5px solid var(--red-line); border-radius: 10px; padding: 11px 14px; }
+    .aviso h3 { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--red); margin-bottom: 3px; }
+    .aviso p { font-size: 13px; color: var(--red-ink); }
+
+    footer { text-align: center; font-size: 12.5px; color: #64748b; padding: 6px 44px 24px; }
+  </style>
+</head>
+<body>
+
+<!-- Íconos: <svg class="i"><use href="#i-sol"/></svg>. Nunca emoji: dependen de la fuente del sistema. -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-lista" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 14h7M8.5 18h4"/></symbol>
+  <symbol id="i-balanza" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></symbol>
+  <symbol id="i-mano" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-2a2 2 0 0 0-4 0"/></symbol>
+  <symbol id="i-reloj" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4"/></symbol>
+  <symbol id="i-calendario" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></symbol>
+  <symbol id="i-edificio" viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></symbol>
+  <symbol id="i-termometro" viewBox="0 0 24 24"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></symbol>
+  <symbol id="i-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-gota" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-hoja" viewBox="0 0 24 24"><path d="M5 19c0-9 6-14 15-14 0 9-5 15-14 15zM5 19l7-7"/></symbol>
+  <symbol id="i-frasco" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="4" rx="1"/><rect x="5" y="6" width="14" height="16" rx="3"/><path d="M8 12h8v5H8z"/></symbol>
+  <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M12 3l10 18H2zM12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-prohibido" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+  <symbol id="i-exclama" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></symbol>
+  <symbol id="i-ojo" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+  <symbol id="i-persona" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15l4-4 3 3 6-7"/></symbol>
+  <symbol id="i-dinero" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/></symbol>
+  <symbol id="i-ubicacion" viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="i-herramienta" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></symbol>
+  <symbol id="i-camion" viewBox="0 0 24 24"><path d="M2 6h12v10H2zM14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+  <symbol id="i-rayo" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-corazon" viewBox="0 0 24 24"><path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z"/></symbol>
+</svg>
+
+<header class="cabecera">
+  <svg class="i emblema"><use href="#i-hoja"/></svg>
+  <div class="crece">
+    <h1>Título de la pieza</h1>
+    <div class="bajada">Bajada: qué es, para quién, el dato que lo define</div>
+    <span class="etiqueta">Etiqueta de estado · alcance</span>
+  </div>
+  <svg class="i emblema"><use href="#i-frasco"/></svg>
+</header>
+
+<main>
+  <h2><svg class="i"><use href="#i-lista"/></svg>Sección de etiquetas</h2>
+  <div class="chips">
+    <div class="chip t1">Etiqueta uno</div>
+    <div class="chip t2">Etiqueta dos</div>
+    <div class="chip t3">Etiqueta tres</div>
+    <div class="chip t4">Etiqueta cuatro</div>
+  </div>
+  <p class="nota">Nota de alcance en una línea.</p>
+
+  <h2><svg class="i"><use href="#i-balanza"/></svg>Sección de tarjetas</h2>
+  <div class="grid3">
+    <div class="card">
+      <h3>Nivel bajo</h3>
+      <div class="dato"><span class="punto" style="width:12px;height:12px;background:#d97706"></span>Dato principal</div>
+      <p>Detalle breve del nivel.</p>
+    </div>
+    <div class="card">
+      <h3>Nivel medio</h3>
+      <div class="dato"><span class="punto" style="width:16px;height:16px;background:#65a30d"></span>Dato principal</div>
+      <p>Detalle breve del nivel.</p>
+    </div>
+    <div class="card">
+      <h3>Nivel alto</h3>
+      <div class="dato"><span class="punto" style="width:21px;height:21px;background:#92400e"></span>Dato principal</div>
+      <p>Detalle breve del nivel.</p>
+    </div>
+  </div>
+  <div class="barra">
+    <svg class="i s" style="margin-top:2px"><use href="#i-reloj"/></svg>
+    <div><b>REGLA CLAVE:</b> la instrucción que todos deben leer, con su <b>dato destacado</b>.</div>
+  </div>
+
+  <h2><svg class="i"><use href="#i-mano"/></svg>Sección de pasos</h2>
+  <div class="grid3">
+    <div class="card paso"><h3><span class="num">1</span>Primer paso</h3><p>Qué hacer y por qué, en una o dos frases.</p></div>
+    <div class="card paso"><h3><span class="num">2</span>Segundo paso</h3><p>Qué hacer y por qué, en una o dos frases.</p></div>
+    <div class="card paso"><h3><span class="num">3</span>Tercer paso</h3><p>Qué hacer y por qué, en una o dos frases.</p></div>
+  </div>
+
+  <h2><svg class="i"><use href="#i-edificio"/></svg>Sección informativa</h2>
+  <div class="info">
+    <div><h3><svg class="i s"><use href="#i-termometro"/></svg>Tema uno</h3><p>Detalle.</p></div>
+    <div><h3><svg class="i s"><use href="#i-sol"/></svg>Tema dos</h3><p>Detalle.</p></div>
+    <div><h3><svg class="i s"><use href="#i-gota"/></svg>Tema tres</h3><p>Detalle.</p></div>
+    <div><h3><svg class="i s"><use href="#i-casa"/></svg>Tema cuatro</h3><p>Detalle.</p></div>
+  </div>
+
+  <h2><svg class="i"><use href="#i-alerta"/></svg>Advertencias</h2>
+  <div class="avisos">
+    <div class="aviso"><h3><svg class="i s"><use href="#i-prohibido"/></svg>Prohibición</h3><p>Qué no hacer.</p></div>
+    <div class="aviso"><h3><svg class="i s"><use href="#i-ojo"/></svg>Aclaración</h3><p>Qué no ocurre.</p></div>
+    <div class="aviso"><h3><svg class="i s"><use href="#i-exclama"/></svg>Riesgo</h3><p>Cuándo no usar.</p></div>
+    <div class="aviso"><h3><svg class="i s"><use href="#i-escudo"/></svg>Resguardo</h3><p>Cómo guardar.</p></div>
+  </div>
+</main>
+
+<footer>
+  Emisor • Unidad • Alcance de la pieza (piloto, interno, no comercial…)<br>
+  Línea de responsabilidad.
+</footer>
+
+</body>
+</html>

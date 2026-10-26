@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Gemelo digital 3D</title>
+<!--
+  Gemelo digital 3D — plantilla de la skill interactive-3d-structure.
+  Solo se edita el bloque entre SPEC:INICIO y SPEC:FIN. Todo lo demás es el motor.
+  Three.js fijado a 0.186.1 (jsDelivr). Requiere WebGL 2: Chrome/Edge 56+, Firefox 51+, Safari 15+.
+-->
+<script>
+  try { var t = localStorage.getItem('gemelo3d-tema'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+:root {
+  --bg: #070b14; --surface: rgba(15, 23, 42, .86); --surface-2: rgba(255, 255, 255, .05);
+  --border: rgba(255, 255, 255, .12); --text: #e2e8f0; --muted: #94a3b8;
+  --accent: #38bdf8; --on-accent: #04121f; --danger: #f87171; --ok: #34d399; --warn: #fbbf24;
+  --scene-bg: #0b1220; --grid-major: #334155; --grid-minor: #1c2637;
+  --cota: #fbbf24; --cota-bg: rgba(11, 18, 32, .88); --tag: #cbd5e1;
+  --shadow: 0 12px 32px rgba(0, 0, 0, .45);
+  --bar-h: 56px; --panel-w: 300px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-theme="light"] {
+  --bg: #eef2f7; --surface: rgba(255, 255, 255, .92); --surface-2: rgba(15, 23, 42, .045);
+  --border: rgba(15, 23, 42, .14); --text: #0f172a; --muted: #475569;
+  --accent: #0369a1; --on-accent: #ffffff; --danger: #b91c1c; --ok: #047857; --warn: #b45309;
+  --scene-bg: #e6ebf2; --grid-major: #94a3b8; --grid-minor: #cbd5e1;
+  --cota: #b45309; --cota-bg: rgba(255, 255, 255, .92); --tag: #334155;
+  --shadow: 0 10px 28px rgba(15, 23, 42, .16);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); overflow: hidden; font-size: 13px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
+#stage { position: fixed; inset: 0; height: 100vh; height: 100dvh; }
+#stage canvas { display: block; width: 100%; height: 100%; outline: none; }
+.labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.glass { background: var(--surface); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--border); box-shadow: var(--shadow); }
+
+.bar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; height: calc(var(--bar-h) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0 16px; display: flex; align-items: center; gap: 12px; border-width: 0 0 1px; }
+.titles { min-width: 0; flex: 1; }
+.titles h1 { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titles p { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn { appearance: none; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 8px; min-height: 36px; min-width: 36px; padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; touch-action: manipulation; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible, summary:focus-visible, .layer:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+a.btn { text-decoration: none; }
+
+.panel { position: fixed; z-index: 15; top: calc(var(--bar-h) + env(safe-area-inset-top) + 12px); left: 12px; bottom: 12px; width: var(--panel-w); border-radius: 12px; padding: 4px 14px 14px; overflow: auto; overscroll-behavior: contain; }
+.panel[hidden] { display: none; }
+.panel details { border-bottom: 1px solid var(--border); padding: 8px 0; }
+.panel details:last-of-type { border-bottom: 0; }
+.panel summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; min-height: 30px; font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.panel summary::-webkit-details-marker { display: none; }
+.panel summary::after { content: "▾"; transition: transform .2s; }
+.panel details:not([open]) summary::after { transform: rotate(-90deg); }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.grid3 .btn { padding: 0 4px; font-size: 11.5px; }
+.layer { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.layer:hover { background: var(--surface-2); }
+.layer input { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
+.sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border); flex-shrink: 0; }
+.layer .n { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.range { width: 100%; margin-top: 10px; accent-color: var(--accent); }
+.aviso { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--accent); border-radius: 6px; background: var(--surface-2); }
+.aviso.alerta { border-left-color: var(--danger); }
+.aviso.ok { border-left-color: var(--ok); }
+.aviso strong { display: block; margin-bottom: 2px; }
+.errores { margin-top: 10px; padding: 8px 10px; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-size: 12px; }
+.errores[hidden] { display: none; }
+.errores ul { margin: 4px 0 0 16px; }
+.piezas { list-style: none; margin-top: 4px; }
+.piezas .grupo { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--muted); }
+.piezas button { all: unset; box-sizing: border-box; display: flex; gap: 8px; justify-content: space-between; width: 100%; padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.piezas button:hover, .piezas button:focus-visible { background: var(--surface-2); outline: none; }
+.piezas small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.hint { margin-top: 10px; font-size: 11.5px; color: var(--muted); }
+
+.ficha { position: fixed; z-index: 18; right: 12px; bottom: 12px; width: min(340px, calc(100vw - 24px)); padding: 12px 14px; border-radius: 12px; }
+.ficha[hidden] { display: none; }
+.ficha h2 { font-size: 14px; padding-right: 36px; margin-bottom: 6px; }
+.ficha dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 12px; }
+.ficha dt { color: var(--muted); }
+.ficha .cerrar { position: absolute; top: 8px; right: 8px; }
+.ficha .enfocar { margin-top: 10px; }
+.gizmo { position: fixed; z-index: 12; top: calc(var(--bar-h) + env(safe-area-inset-top) + 12px); right: 12px; width: 96px; height: 96px; border-radius: 50%; cursor: pointer; border: 1px solid var(--border); }
+.cota-lbl, .tag-lbl { font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; padding: 3px 6px; border-radius: 5px; font-variant-numeric: tabular-nums; }
+.cota-lbl { color: var(--cota); background: var(--cota-bg); border: 1px solid var(--cota); }
+.tag-lbl { color: var(--tag); background: var(--cota-bg); border: 1px solid var(--border); font-weight: 600; }
+.fallo { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; background: var(--bg); text-align: center; }
+.fallo[hidden] { display: none; }
+.fallo .caja { max-width: 460px; padding: 24px; border-radius: 14px; }
+.fallo h2 { font-size: 18px; margin-bottom: 8px; }
+.fallo p { color: var(--muted); }
+#print-sheet { display: none; }
+
+@media (max-width: 720px) {
+  :root { --bar-h: 52px; }
+  .btn .lbl { display: none; }
+  .panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 52vh; max-height: 52dvh; border-radius: 14px 14px 0 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .gizmo { width: 76px; height: 76px; }
+  .cota-lbl, .tag-lbl { font-size: 9.5px; padding: 2px 4px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media print {
+  @page { margin: 12mm; }
+  html, body { height: auto; overflow: visible; background: #fff !important; color: #000 !important; }
+  body > *:not(#print-sheet) { display: none !important; }
+  #print-sheet { display: block; font-size: 11pt; }
+  #print-sheet h1 { font-size: 16pt; margin-bottom: 2pt; }
+  #print-sheet img { width: 100%; margin: 8pt 0; border: 1px solid #999; }
+  #print-sheet table { width: 100%; border-collapse: collapse; margin-top: 8pt; font-size: 9.5pt; }
+  #print-sheet td, #print-sheet th { border-bottom: 1px solid #bbb; padding: 3pt 4pt; text-align: left; }
+}
+</style>
+<script async src="https://cdn.jsdelivr.net/npm/es-module-shims@2.8.4/dist/es-module-shims.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage"></div>
+
+<header class="bar glass">
+  <div class="titles"><h1 id="titulo">Gemelo digital 3D</h1><p id="subtitulo"></p></div>
+  <div class="actions">
+    <span id="enlaces" class="actions"></span>
+    <button class="btn" id="b-panel" aria-pressed="true" aria-controls="panel" title="Mostrar u ocultar el panel">☰<span class="lbl">Panel</span></button>
+    <button class="btn" id="b-reset" title="Volver a la vista inicial">⟲<span class="lbl">Vista inicial</span></button>
+    <button class="btn" id="b-tema" title="Cambiar tema claro/oscuro">◐<span class="lbl">Tema</span></button>
+    <button class="btn" id="b-png" title="Descargar imagen PNG">⬇<span class="lbl">PNG</span></button>
+  </div>
+</header>
+
+<aside class="panel glass" id="panel" aria-label="Controles del visor">
+  <div class="errores" id="errores" hidden role="alert"></div>
+  <details open><summary>Vistas</summary>
+    <div class="grid3" id="vistas"></div>
+  </details>
+  <details open><summary>Capas</summary><div id="capas"></div></details>
+  <details open><summary>Modo</summary>
+    <div class="grid3" id="modos">
+      <button class="btn" data-modo="solido" aria-pressed="true">Sólido</button>
+      <button class="btn" data-modo="rayos" aria-pressed="false">Rayos X</button>
+      <button class="btn" data-modo="alambre" aria-pressed="false">Alambre</button>
+    </div>
+    <label id="explota-box" hidden><span class="hint">Vista explosionada</span><input class="range" id="explota" type="range" min="0" max="100" value="0"></label>
+  </details>
+  <details open id="avisos-box" hidden><summary>Notas</summary><div id="avisos"></div></details>
+  <details><summary>Piezas</summary><ul class="piezas" id="piezas"></ul></details>
+  <p class="hint" id="hint"></p>
+</aside>
+
+<div class="gizmo" id="gizmo" role="button" tabindex="0" aria-label="Orientación: clic en una etiqueta para mirar desde ese lado"></div>
+
+<div class="ficha glass" id="ficha" hidden aria-live="polite">
+  <button class="btn cerrar" id="ficha-cerrar" aria-label="Cerrar ficha">✕</button>
+  <h2 id="ficha-nombre"></h2>
+  <dl id="ficha-datos"></dl>
+  <button class="btn enfocar" id="ficha-enfocar">Enfocar pieza</button>
+</div>
+
+<div class="fallo" id="fallo" hidden><div class="caja glass"><div class="msg"></div></div></div>
+<div id="print-sheet"></div>
+
+<script nomodule>
+  document.getElementById('fallo').hidden = false;
+  document.querySelector('#fallo .msg').innerHTML = '<h2>Navegador demasiado antiguo</h2><p>Abre este archivo en Chrome, Edge, Firefox o Safari actualizados.</p>';
+</script>
+<script>
+  // Vigía: si el motor no arrancó en 15 s, casi siempre es que no se pudo descargar Three.js.
+  setTimeout(function () {
+    var v = window.__viewer;
+    if (v && (v.ready || v.fallo)) return;
+    var el = document.getElementById('fallo');
+    el.dataset.tipo = 'carga'; el.hidden = false;
+    el.querySelector('.msg').innerHTML = '<h2>No se pudo cargar el motor 3D</h2><p>El visor descarga Three.js desde cdn.jsdelivr.net. Revisa la conexión a internet o un bloqueador de contenido y recarga la página.</p>';
+  }, 15000);
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ============================== SPEC:INICIO ==============================
+   Datos del objeto. Unidades: mm. Esquema completo en SPEC.md de la skill.
+   Este SPEC de ejemplo se reemplaza entero.                                  */
+
+const MESA = { ancho: 1200, fondo: 600, alto: 750, tapa: 18 };
+const PINO = [45, 70];                                  // sección cepillada 2×3"
+const PATA = { x: MESA.ancho / 2 - 40, z: MESA.fondo / 2 - 40 };
+const EST = { x: -250, diam: 300, alto: 400, agua: 300 };
+const MACETAS = [[-150, -60], [150, -60]];              // [x, z] sobre la tapa
+const GAB = { x: 450, z: 180, dims: [160, 70, 120], pared: 3 };
+
+const SPEC = {
+  titulo: 'Ejemplo — Mesa de cultivo',
+  subtitulo: 'SPEC de muestra de la plantilla · reemplazar completo',
+  orientacion: { modo: 'cardinal', frente: 'N' },
+  escala: 'auto',
+  vistaInicial: 'iso',
+  capas: [
+    { id: 'estructura', nombre: 'Estructura de madera' },
+    { id: 'hidraulica', nombre: 'Estanque y riego' },
+    { id: 'cultivo', nombre: 'Macetas y plantas' },
+    { id: 'control', nombre: 'Gabinete de control' },
+  ],
+  piezas: [
+    { tipo: 'viga', nombre: 'Pata', capa: 'estructura', material: 'madera', seccion: PINO,
+      desde: [0, 0, 0], hasta: [0, MESA.alto - MESA.tapa, 0],
+      en: [[-PATA.x, 0, -PATA.z], [PATA.x, 0, -PATA.z], [-PATA.x, 0, PATA.z], [PATA.x, 0, PATA.z]] },
+    { tipo: 'viga', nombre: 'Travesaño', capa: 'estructura', material: 'madera', seccion: PINO,
+      desde: [-PATA.x, 150, 0], hasta: [PATA.x, 150, 0], en: [[0, 0, -PATA.z], [0, 0, PATA.z]] },
+    { tipo: 'caja', nombre: 'Tapa', capa: 'estructura', material: 'madera', nota: 'Terciado 18 mm',
+      dims: [MESA.ancho, MESA.tapa, MESA.fondo], pos: [0, MESA.alto - MESA.tapa, 0] },
+    { tipo: 'extrusion', nombre: 'Escuadra L', capa: 'estructura', material: 'metal', profundidad: 40,
+      contorno: [[0, 0], [60, 0], [60, 4], [4, 4], [4, 60], [0, 60]],
+      pos: [-PATA.x + PINO[0] / 2, MESA.alto - MESA.tapa - 60, -PATA.z - 20] },
+
+    { tipo: 'cilindro', id: 'estanque', nombre: 'Estanque', capa: 'hidraulica', material: 'hdpe-translucido',
+      diam: EST.diam, alto: EST.alto, pos: [EST.x, 0, 0], orden: 2 },
+    { tipo: 'cilindro', nombre: 'Agua', capa: 'hidraulica', material: 'agua', orden: 1,
+      diam: EST.diam - 10, alto: EST.agua, pos: [EST.x, 5, 0],
+      nota: `Nivel ${fmtLen(EST.agua)} ≈ ${fmtNum(litros(EST.diam - 10, EST.agua))} L` },
+    { tipo: 'caja', nombre: 'Bomba', capa: 'hidraulica', material: 'plastico-negro',
+      dims: [40, 45, 40], pos: [EST.x, 5, 0], dentroDe: 'estanque' },
+    { tipo: 'manguera', nombre: 'Manguera', capa: 'hidraulica', material: 'manguera', diam: 8,
+      repetir: { n: MACETAS.length },
+      puntos: (i) => [[EST.x, 50, 0], [EST.x, EST.alto + 60, 0],
+        [(EST.x + MACETAS[i][0]) / 2, MESA.alto + 300, MACETAS[i][1] / 2],
+        [MACETAS[i][0] + 60, MESA.alto + 240, MACETAS[i][1]]] },
+
+    { tipo: 'grupo', nombre: 'Maceta', capa: 'cultivo', material: 'plastico-negro',
+      en: MACETAS.map(([x, z]) => [x, MESA.alto, z]),
+      hijos: [
+        { tipo: 'cilindro', diam: 200, diamSup: 250, alto: 220 },
+        { tipo: 'cilindro', material: 'sustrato', diam: 240, alto: 12, pos: [0, 200, 0] },
+        { tipo: 'planta', nombre: 'Planta', pos: [0, 212, 0] },
+      ] },
+
+    { tipo: 'caja-abierta', id: 'gabinete', nombre: 'Gabinete', capa: 'control', material: 'plastico-gris',
+      dims: GAB.dims, pared: GAB.pared, pos: [GAB.x, MESA.alto, GAB.z] },
+    { tipo: 'caja', nombre: 'Tapa gabinete', capa: 'control', material: 'plastico-blanco',
+      dims: [GAB.dims[0], 6, GAB.dims[2]], pos: [GAB.x, MESA.alto + GAB.dims[1], GAB.z], explota: [0, 90, 0] },
+    { tipo: 'caja', nombre: 'Placa controladora', capa: 'control', material: 'pcb-verde',
+      dims: [70, 1.6, 28], pos: [GAB.x, MESA.alto + GAB.pared + 8, GAB.z], dentroDe: 'gabinete' },
+    { tipo: 'panel', nombre: 'Malla sombra trasera', capa: 'estructura', material: 'malla-sombra',
+      dims: [MESA.ancho, 600], pos: [0, MESA.alto, -MESA.fondo / 2 - 20] },
+  ],
+  cotas: [
+    { de: [EST.x - EST.diam / 2, 5, 0], a: [EST.x - EST.diam / 2, 5 + EST.agua, 0], desplazar: [-80, 0, 0],
+      texto: `agua ${fmtLen(EST.agua)}` },
+  ],
+  avisos: [
+    { nivel: 'info', titulo: 'Plantilla', texto: 'Este SPEC es un ejemplo: se reemplaza completo entre SPEC:INICIO y SPEC:FIN.' },
+    { nivel: 'ok', titulo: 'Capacidad', texto: `Estanque Ø${EST.diam} mm con agua a ${fmtLen(EST.agua)} ≈ ${fmtNum(litros(EST.diam - 10, EST.agua))} L.` },
+  ],
+  constructores: {
+    planta(THREE, p, ctx) {
+      const g = new THREE.Group();
+      g.add(ctx.mesh(new THREE.CylinderGeometry(4, 6, 180, 8).translate(0, 90, 0), 'tallo'));
+      g.add(ctx.mesh(new THREE.IcosahedronGeometry(90, 1).translate(0, 240, 0), 'follaje'));
+      return g;
+    },
+  },
+};
+
+/* =============================== SPEC:FIN =============================== */
+
+/* ============================ MOTOR — no editar ============================
+   Módulo profundo: recibe SPEC, entrega el visor. Expone window.__viewer
+   (ready, fallo, errores, selfTest) para scripts/verify.mjs.                 */
+
+// Ayudas disponibles dentro del SPEC (declaraciones de función: se elevan).
+function fmtNum(n) { const r = Math.round(n * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); }
+function fmtLen(mm) { return Math.abs(mm) < 1000 ? `${fmtNum(mm)} mm` : `${(mm / 1000).toFixed(2)} m`; }
+function litros(diam, alto, diamSup = diam) {
+  const r1 = diam / 2, r2 = diamSup / 2;
+  return Math.round((Math.PI * alto / 3) * (r1 * r1 + r1 * r2 + r2 * r2) / 1e5) / 10;
+}
+
+const viewer = (window.__viewer = { ready: false, fallo: null, errores: [], selfTest: null });
+const $ = (s) => document.querySelector(s);
+const DEG = Math.PI / 180;
+const UP = new THREE.Vector3(0, 1, 0);
+const V = (a) => new THREE.Vector3(a?.[0] ?? 0, a?.[1] ?? 0, a?.[2] ?? 0);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COARSE = matchMedia('(pointer: coarse)').matches;
+const MOBILE = () => innerWidth <= 720;
+const tok = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function specError(msg) { viewer.errores.push(msg); console.error('[SPEC] ' + msg); }
+function fail(tipo, html) {
+  viewer.fallo = tipo;
+  const el = $('#fallo'); el.dataset.tipo = tipo; el.hidden = false;
+  el.querySelector('.msg').innerHTML = html;
+}
+
+/* ---------- Materiales ---------- */
+const PRESETS = {
+  'madera':           { nombre: 'Madera tratada', color: '#b98a57', rugosidad: 0.78, bordes: true },
+  'madera-oscura':    { nombre: 'Madera oscura', color: '#7c5a3a', rugosidad: 0.8, bordes: true },
+  'metal':            { nombre: 'Acero galvanizado', color: '#b8c0c8', metal: 0.85, rugosidad: 0.3 },
+  'aluminio':         { nombre: 'Aluminio', color: '#d4d8dd', metal: 0.8, rugosidad: 0.35 },
+  'laton':            { nombre: 'Latón / dorado', color: '#c9a646', metal: 0.9, rugosidad: 0.3 },
+  'plastico-gris':    { nombre: 'Plástico gris', color: '#8b929c', rugosidad: 0.6 },
+  'plastico-negro':   { nombre: 'Plástico negro', color: '#262b33', rugosidad: 0.55 },
+  'plastico-blanco':  { nombre: 'Plástico blanco', color: '#e5e7eb', rugosidad: 0.55 },
+  'petg-verde':       { nombre: 'PETG verde', color: '#10b981', rugosidad: 0.45 },
+  'petg-azul':        { nombre: 'PETG azul', color: '#2563eb', rugosidad: 0.45 },
+  'tpu-blanco':       { nombre: 'TPU blanco', color: '#f1f5f9', rugosidad: 0.85 },
+  'pcb-verde':        { nombre: 'PCB verde', color: '#166534', rugosidad: 0.6 },
+  'pcb-azul':         { nombre: 'PCB azul', color: '#1e3a8a', rugosidad: 0.6 },
+  'pcb-negro':        { nombre: 'PCB negro', color: '#111827', rugosidad: 0.6 },
+  'rele':             { nombre: 'Relé (carcasa)', color: '#1d4ed8', rugosidad: 0.35 },
+  'bornera':          { nombre: 'Bornera', color: '#0ea5e9', rugosidad: 0.5 },
+  'componente':       { nombre: 'Componente', color: '#1f2937', rugosidad: 0.5 },
+  'cable':            { nombre: 'Cable', color: '#111827', rugosidad: 0.7 },
+  'manguera':         { nombre: 'Manguera', color: '#7dd3fc', rugosidad: 0.3, opacidad: 0.85 },
+  'agua':             { nombre: 'Agua', color: '#38bdf8', rugosidad: 0.1, opacidad: 0.45 },
+  'hdpe-translucido': { nombre: 'HDPE translúcido', color: '#bae6fd', rugosidad: 0.35, opacidad: 0.3, doble: true },
+  'hdpe-azul':        { nombre: 'HDPE azul', color: '#0284c7', rugosidad: 0.4 },
+  'malla':            { nombre: 'Malla antiinsectos', color: '#e2e8f0', rugosidad: 0.9, opacidad: 0.3, doble: true },
+  'malla-sombra':     { nombre: 'Malla sombra', color: '#16a34a', rugosidad: 0.9, opacidad: 0.45, doble: true },
+  'sustrato':         { nombre: 'Sustrato', color: '#5b3a24', rugosidad: 1 },
+  'follaje':          { nombre: 'Follaje', color: '#22c55e', rugosidad: 0.7 },
+  'tallo':            { nombre: 'Tallo', color: '#15803d', rugosidad: 0.7 },
+  'goma':             { nombre: 'Goma / neopreno', color: '#141414', rugosidad: 0.95 },
+  'concreto':         { nombre: 'Concreto', color: '#9ca3af', rugosidad: 0.95 },
+  'pantalla':         { nombre: 'Pantalla', color: '#0c4a6e', rugosidad: 0.2, emisivo: '#0ea5e9', emisivoIntensidad: 0.6 },
+  'led-verde':        { nombre: 'LED verde', color: '#22c55e', emisivo: '#22c55e' },
+  'led-rojo':         { nombre: 'LED rojo', color: '#ef4444', emisivo: '#ef4444' },
+  'alerta':           { nombre: 'Marcador de alerta', color: '#ef4444', emisivo: '#ef4444', emisivoIntensidad: 0.7 },
+  'referencia':       { nombre: 'Referencia de escala', color: '#94a3b8', rugosidad: 0.8 },
+};
+const MATS = new Map();
+const EDGE_MAT = new THREE.LineBasicMaterial({ color: 0x2b1d10, transparent: true, opacity: 0.35 });
+
+function matDef(key) {
+  const own = SPEC.materiales?.[key];
+  return own ? { ...(PRESETS[key] ?? {}), ...own } : PRESETS[key];
+}
+function getMat(key = 'plastico-gris') {
+  if (MATS.has(key)) return MATS.get(key);
+  let def = matDef(key);
+  if (!def) { specError(`material desconocido «${key}»`); def = PRESETS['plastico-gris']; }
+  const op = def.opacidad ?? 1;
+  const m = new THREE.MeshStandardMaterial({
+    color: def.color ?? '#9ca3af', roughness: def.rugosidad ?? 0.6, metalness: def.metal ?? 0,
+    transparent: op < 1, opacity: op, depthWrite: op >= 1, side: def.doble ? THREE.DoubleSide : THREE.FrontSide,
+  });
+  if (def.emisivo) { m.emissive.set(def.emisivo); m.emissiveIntensity = def.emisivoIntensidad ?? 0.8; }
+  m.userData = { key, nombre: def.nombre ?? key, bordes: !!def.bordes };
+  MATS.set(key, m);
+  return m;
+}
+function mk(geo, p) {
+  const mat = getMat(p.material);
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = !mat.transparent; m.receiveShadow = !mat.transparent;
+  if (p.orden) m.renderOrder = p.orden;
+  if (mat.userData.bordes) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), EDGE_MAT); e.raycast = () => {}; m.add(e); }
+  return m;
+}
+
+/* ---------- Validación ---------- */
+const label = (p) => String(p.nombre ?? p.id ?? p.tipo ?? '¿pieza?');
+function num(p, k, def) {
+  const v = p[k] ?? def;
+  if (typeof v !== 'number' || !isFinite(v) || v <= 0) { specError(`«${label(p)}»: ${k} debe ser un número > 0 (recibido ${JSON.stringify(v)})`); return 1; }
+  return v;
+}
+function arr(p, k, n) {
+  const v = p[k];
+  if (!Array.isArray(v) || v.length !== n || v.some((x) => typeof x !== 'number' || !isFinite(x) || x <= 0)) {
+    specError(`«${label(p)}»: ${k} debe ser [${n} números > 0] (recibido ${JSON.stringify(v)})`); return Array(n).fill(1);
+  }
+  return v;
+}
+function pts(p, k, min, v = p[k]) {
+  if (!Array.isArray(v) || v.length < min || v.some((q) => !Array.isArray(q) || q.length !== 3 || q.some((x) => typeof x !== 'number' || !isFinite(x)))) {
+    specError(`«${label(p)}»: ${k} debe ser una lista de ${min}+ puntos [x, y, z]`); return null;
+  }
+  return v.map(V);
+}
+function ends(p) {
+  const P = pts(p, 'desde/hasta', 2, [p.desde, p.hasta]) ?? [V([0, 0, 0]), V([0, 1, 0])];
+  if (P[0].distanceTo(P[1]) < 1e-6) specError(`«${label(p)}»: desde y hasta coinciden`);
+  return P;
+}
+function sizeText(obj) {
+  const s = new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3());
+  return `${fmtNum(s.x)} × ${fmtNum(s.y)} × ${fmtNum(s.z)} mm (envolvente)`;
+}
+
+/* ---------- Constructores de piezas (pivote = centro de la base) ---------- */
+function orient(obj, a, b, giro = 0) {
+  const d = new THREE.Vector3().subVectors(b, a).normalize();
+  const ref = Math.abs(d.y) > 0.999 ? new THREE.Vector3(0, 0, 1) : UP;
+  const side = new THREE.Vector3().crossVectors(ref, d).normalize();
+  const up2 = new THREE.Vector3().crossVectors(d, side);
+  obj.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, up2, d));
+  if (giro) obj.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), giro * DEG));
+  obj.position.addVectors(a, b).multiplyScalar(0.5);
+  const holder = new THREE.Group(); holder.add(obj);
+  return holder;
+}
+const BUILD = {
+  'caja'(p) {
+    const [w, h, d] = arr(p, 'dims', 3);
+    const g = new THREE.BoxGeometry(w, h, d); g.translate(0, h / 2, 0);
+    return [mk(g, p), `${fmtNum(w)} × ${fmtNum(h)} × ${fmtNum(d)} mm`];
+  },
+  'caja-abierta'(p) {
+    const [w, h, d] = arr(p, 'dims', 3); const t = num(p, 'pared', 3);
+    const grp = new THREE.Group();
+    const add = (sx, sy, sz, x, y, z) => { const g = new THREE.BoxGeometry(sx, sy, sz); g.translate(x, y, z); grp.add(mk(g, p)); };
+    if (!p.sinFondo) add(w, t, d, 0, t / 2, 0);
+    add(w, h, t, 0, h / 2, d / 2 - t / 2); add(w, h, t, 0, h / 2, -d / 2 + t / 2);
+    add(t, h, d - 2 * t, w / 2 - t / 2, h / 2, 0); add(t, h, d - 2 * t, -w / 2 + t / 2, h / 2, 0);
+    return [grp, `${fmtNum(w)} × ${fmtNum(h)} × ${fmtNum(d)} mm · pared ${fmtNum(t)} mm`];
+  },
+  'cilindro'(p) {
+    const d = num(p, 'diam'), h = num(p, 'alto'); const ds = p.diamSup === undefined ? d : num(p, 'diamSup');
+    const g = new THREE.CylinderGeometry(ds / 2, d / 2, h, p.segmentos ?? 48); g.translate(0, h / 2, 0);
+    const vol = litros(d, h, ds);
+    return [mk(g, p), `Ø${fmtNum(d)}${ds !== d ? '→' + fmtNum(ds) : ''} × ${fmtNum(h)} mm${vol >= 0.5 ? ` · vol. geométrico ${fmtNum(vol)} L` : ''}`];
+  },
+  'esfera'(p) {
+    const d = num(p, 'diam');
+    const g = new THREE.SphereGeometry(d / 2, 32, 16); g.translate(0, d / 2, 0);
+    return [mk(g, p), `Ø${fmtNum(d)} mm`];
+  },
+  'barra'(p) {
+    const [a, b] = ends(p); const L = a.distanceTo(b);
+    const d = num(p, 'diam'); const ds = p.diamSup === undefined ? d : num(p, 'diamSup');
+    const g = new THREE.CylinderGeometry(ds / 2, d / 2, L, 24); g.rotateX(Math.PI / 2);
+    return [orient(mk(g, p), a, b, p.giro), `Ø${fmtNum(d)}${ds !== d ? '→' + fmtNum(ds) : ''} mm · largo ${fmtLen(L)}`];
+  },
+  'viga'(p) {
+    const [a, b] = ends(p); const L = a.distanceTo(b); const [s1, s2] = arr(p, 'seccion', 2);
+    return [orient(mk(new THREE.BoxGeometry(s1, s2, L), p), a, b, p.giro), `${fmtNum(s1)} × ${fmtNum(s2)} mm · largo ${fmtLen(L)}`];
+  },
+  'manguera'(p) {
+    const P = pts(p, 'puntos', 2) ?? [V([0, 0, 0]), V([0, 1, 0])];
+    const curve = new THREE.CatmullRomCurve3(P, false, 'centripetal');
+    const d = num(p, 'diam');
+    const g = new THREE.TubeGeometry(curve, Math.max(32, P.length * 24), d / 2, 12, false);
+    return [mk(g, p), `Ø${fmtNum(d)} mm · largo ≈ ${fmtLen(curve.getLength())}`];
+  },
+  'panel'(p) {
+    if (p.esquinas) {
+      const P = pts(p, 'esquinas', 4) ?? [V([0, 0, 0]), V([1, 0, 0]), V([1, 1, 0]), V([0, 1, 0])];
+      const g = new THREE.BufferGeometry().setFromPoints([P[0], P[1], P[2], P[0], P[2], P[3]]); g.computeVertexNormals();
+      const area = new THREE.Triangle(P[0], P[1], P[2]).getArea() + new THREE.Triangle(P[0], P[2], P[3]).getArea();
+      return [mk(g, p), `${(area / 1e6).toFixed(2)} m²`];
+    }
+    const [w, h] = arr(p, 'dims', 2);
+    const g = new THREE.PlaneGeometry(w, h); g.translate(0, h / 2, 0);
+    return [mk(g, p), `${fmtNum(w)} × ${fmtNum(h)} mm`];
+  },
+  'extrusion'(p) {
+    const C = p.contorno;
+    if (!Array.isArray(C) || C.length < 3 || C.some((q) => !Array.isArray(q) || q.length !== 2 || q.some((x) => !isFinite(x)))) {
+      specError(`«${label(p)}»: contorno debe ser una lista de 3+ puntos [x, y]`); return [new THREE.Group(), ''];
+    }
+    const e = num(p, 'profundidad');
+    const g = new THREE.ExtrudeGeometry(new THREE.Shape(C.map(([x, y]) => new THREE.Vector2(x, y))), { depth: e, bevelEnabled: false });
+    return [mk(g, p), `perfil extruido · profundidad ${fmtNum(e)} mm`];
+  },
+  'grupo'(p) {
+    const grp = new THREE.Group();
+    for (const h of expand(p.hijos ?? [])) { const r = buildPart(h, p); if (r) grp.add(r); }
+    return [grp, null];
+  },
+};
+const CTX = {
+  material: (key) => getMat(key),
+  mesh: (geo, key) => mk(geo, { material: key }),
+};
+
+/* ---------- Expansión de repeticiones ---------- */
+function expand(list) {
+  const out = [];
+  for (const p of list ?? []) {
+    if (!p || typeof p !== 'object') { specError(`pieza inválida: ${JSON.stringify(p)}`); continue; }
+    let at = null;
+    if (p.en) at = p.en;
+    else if (p.repetir) {
+      const n = p.repetir.n, paso = p.repetir.paso ?? [0, 0, 0], b = p.pos ?? [0, 0, 0];
+      if (!Number.isInteger(n) || n < 1) { specError(`«${label(p)}»: repetir.n debe ser entero ≥ 1`); continue; }
+      at = Array.from({ length: n }, (_, i) => [b[0] + paso[0] * i, b[1] + paso[1] * i, b[2] + paso[2] * i]);
+    }
+    if (!at) { out.push(p); continue; }
+    at.forEach((pos, i) => {
+      const q = { ...p, pos, en: undefined, repetir: undefined };
+      for (const k of Object.keys(q)) if (typeof q[k] === 'function') q[k] = q[k](i);
+      if (typeof p.nombre !== 'function' && p.nombre) q.nombre = `${p.nombre} ${i + 1}`;
+      if (p.id) q.id = `${p.id}-${i + 1}`;
+      out.push(q);
+    });
+  }
+  return out;
+}
+
+/* ---------- Ensamble ---------- */
+const INFOS = [], TOP = [], BYID = new Map();
+let seq = 0;
+function buildPart(p, parent) {
+  if (parent) p = { material: parent.material, ...p, capa: parent.capa };
+  if (!parent && !p.nombre) { specError(`pieza de tipo «${p.tipo}» sin nombre`); p = { ...p, nombre: p.id ?? p.tipo }; }
+  let res;
+  try {
+    if (BUILD[p.tipo]) res = BUILD[p.tipo](p);
+    else if (typeof SPEC.constructores?.[p.tipo] === 'function') {
+      const o = SPEC.constructores[p.tipo](THREE, p, CTX);
+      if (!o?.isObject3D) throw new Error('el constructor no devolvió un THREE.Object3D');
+      res = [o, null];
+    } else { specError(`«${label(p)}»: tipo desconocido «${p.tipo}»`); return null; }
+  } catch (e) { specError(`«${label(p)}»: ${e.message}`); return null; }
+  const [obj, dims] = res;
+  const root = new THREE.Group(); root.add(obj);
+  root.position.copy(V(p.pos));
+  const r = p.rot ?? [0, 0, 0]; root.rotation.set(r[0] * DEG, r[1] * DEG, r[2] * DEG);
+  root.userData.base = root.position.clone();
+  if (p.nombre) {
+    const info = { id: p.id ?? `p${++seq}`, nombre: String(p.nombre), capa: p.capa, material: p.material,
+      dims: dims ?? sizeText(obj), nota: p.nota ?? '', p, root, hijo: !!parent };
+    const mats = new Set();
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      if (!o.userData.info) o.userData.info = info;
+      if (o.material.userData?.nombre) mats.add(o.material.userData.nombre);
+    });
+    info.materiales = [...mats].join(', ');
+    INFOS.push(info); if (!parent) TOP.push(info);
+    if (p.id) { if (BYID.has(p.id)) specError(`id repetido «${p.id}»`); BYID.set(p.id, info); }
+  }
+  return root;
+}
+
+const AXIS = { x: ['−X (izq.)', '+X (der.)'], y: ['abajo', 'arriba'], z: ['−Z (atrás)', '+Z (frente)'] };
+function checkFits() {
+  const tol = 0.5;
+  for (const info of INFOS) {
+    const tid = info.p.dentroDe; if (!tid) continue;
+    const tgt = BYID.get(tid);
+    if (!tgt) { specError(`«${info.nombre}»: dentroDe apunta a un id inexistente «${tid}»`); continue; }
+    const b = new THREE.Box3().setFromObject(info.root); const msgs = [];
+    if (tgt.p.tipo === 'cilindro') {
+      const c = new THREE.Vector3().setFromMatrixPosition(tgt.root.matrixWorld);
+      const r = Math.min(tgt.p.diam, tgt.p.diamSup ?? tgt.p.diam) / 2;
+      const round = info.p.tipo === 'cilindro' || info.p.tipo === 'esfera';   // redondo en redondo: se compara por radio
+      const pc = b.getCenter(new THREE.Vector3());
+      const worst = round
+        ? Math.hypot(pc.x - c.x, pc.z - c.z) + Math.max(info.p.diam, info.p.diamSup ?? 0) / 2 - r
+        : Math.max(...[[b.min.x, b.min.z], [b.min.x, b.max.z], [b.max.x, b.min.z], [b.max.x, b.max.z]]
+          .map(([x, z]) => Math.hypot(x - c.x, z - c.z))) - r;
+      if (worst > tol) msgs.push(`sobresale ${fmtNum(worst)} mm del radio`);
+      if (b.min.y < c.y - tol) msgs.push(`asoma ${fmtNum(c.y - b.min.y)} mm por abajo`);
+      if (b.max.y > c.y + tgt.p.alto + tol) msgs.push(`asoma ${fmtNum(b.max.y - c.y - tgt.p.alto)} mm por arriba`);
+    } else {
+      let inner;
+      if (tgt.p.tipo === 'caja-abierta') {
+        const [w, h, d] = tgt.p.dims, t = tgt.p.pared ?? 3;
+        inner = new THREE.Box3(V([-w / 2 + t, tgt.p.sinFondo ? 0 : t, -d / 2 + t]), V([w / 2 - t, h, d / 2 - t])).applyMatrix4(tgt.root.matrixWorld);
+      } else inner = new THREE.Box3().setFromObject(tgt.root);
+      for (const a of ['x', 'y', 'z']) {
+        const lo = inner.min[a] - b.min[a], hi = b.max[a] - inner.max[a];
+        if (lo > tol) msgs.push(`sobresale ${fmtNum(lo)} mm por ${AXIS[a][0]}`);
+        if (hi > tol) msgs.push(`sobresale ${fmtNum(hi)} mm por ${AXIS[a][1]}`);
+      }
+    }
+    if (msgs.length) specError(`«${info.nombre}» no cabe en «${tgt.nombre}»: ${msgs.join('; ')}`);
+  }
+}
+
+/* ---------- Orientación ---------- */
+const HEAD = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SO: 225, O: 270, NO: 315 };
+const cardinal = SPEC.orientacion?.modo === 'cardinal';
+const frenteH = HEAD[SPEC.orientacion?.frente] ?? 180;
+if (cardinal && !(SPEC.orientacion?.frente in HEAD)) specError(`orientacion.frente debe ser uno de ${Object.keys(HEAD).join(', ')}`);
+function headingVec(h) { const a = (h + 180 - frenteH) * DEG; return new THREE.Vector3(Math.sin(a), 0, -Math.cos(a)); }
+function headingName(v) {
+  const a = Math.atan2(v.x, -v.z) / DEG; const h = ((a - 180 + frenteH) % 360 + 360) % 360;
+  return Object.entries(HEAD).reduce((best, [k, deg]) => {
+    const dd = Math.min(Math.abs(deg - h), 360 - Math.abs(deg - h));
+    return dd < best[1] ? [k, dd] : best;
+  }, ['N', 999])[0];
+}
+const SIDES = [
+  { key: 'frente', nombre: 'Frente', v: V([0, 0, 1]) },
+  { key: 'atras', nombre: 'Atrás', v: V([0, 0, -1]) },
+  { key: 'izq', nombre: 'Izquierda', v: V([-1, 0, 0]) },
+  { key: 'der', nombre: 'Derecha', v: V([1, 0, 0]) },
+];
+const VIEWS = {
+  iso: { nombre: 'Isométrica', v: V([1, 0.85, 1.25]) },
+  frente: { nombre: 'Frente', v: V([0, 0.08, 1]) },
+  atras: { nombre: 'Atrás', v: V([0, 0.08, -1]) },
+  izq: { nombre: 'Izquierda', v: V([-1, 0.08, 0]) },
+  der: { nombre: 'Derecha', v: V([1, 0.08, 0]) },
+  planta: { nombre: 'Planta', v: V([0, 1, 0.0001]) },
+};
+if (cardinal) for (const s of SIDES) VIEWS[s.key].nombre += ` · ${headingName(s.v)}`;
+
+/* ============================== Arranque ============================== */
+function webgl2() { try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; } }
+
+function main() {
+  $('#titulo').textContent = SPEC.titulo ?? 'Gemelo digital 3D';
+  $('#subtitulo').textContent = SPEC.subtitulo ?? '';
+  for (const l of SPEC.enlaces ?? []) {
+    const a = document.createElement('a'); a.className = 'btn'; a.href = l.href; a.title = l.texto;
+    a.innerHTML = `${esc(l.icono ?? '↗')}<span class="lbl">${esc(l.texto)}</span>`;
+    $('#enlaces').appendChild(a);
+  }
+  document.title = SPEC.titulo ?? document.title;
+
+  if (!webgl2()) {
+    fail('webgl', '<h2>Este navegador no puede mostrar el modelo 3D</h2><p>El visor necesita WebGL 2 (Chrome, Edge, Firefox o Safari 15+). Activa la aceleración por hardware en la configuración del navegador o abre el archivo en otro navegador.</p>');
+    return;
+  }
+  const stage = $('#stage'), bar = $('.bar'), panel = $('#panel');
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.autoClear = false;
+  stage.appendChild(renderer.domElement);
+  const labels = new CSS2DRenderer(); labels.domElement.className = 'labels'; stage.appendChild(labels.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(tok('--scene-bg'));
+  const model = new THREE.Group(); scene.add(model);
+  const builtin = { cotas: new THREE.Group(), escala: new THREE.Group(), suelo: new THREE.Group() };
+  Object.values(builtin).forEach((g) => scene.add(g));
+
+  // Capas y piezas
+  const layers = new Map();
+  for (const c of SPEC.capas ?? []) {
+    if (layers.has(c.id)) specError(`capa repetida «${c.id}»`);
+    const g = new THREE.Group(); layers.set(c.id, g); model.add(g);
+  }
+  const specParts = expand(SPEC.piezas);
+  for (const p of specParts) {
+    if (!layers.has(p.capa)) {
+      specError(`«${label(p)}»: capa «${p.capa}» no está declarada en SPEC.capas`);
+      const g = new THREE.Group(); layers.set(p.capa, g); model.add(g);
+    }
+    const root = buildPart(p, null);
+    if (root) layers.get(p.capa).add(root);
+  }
+  scene.updateMatrixWorld(true);
+  checkFits();
+  const ALL_MATS = new Set();
+  model.traverse((o) => { if (o.isMesh) ALL_MATS.add(o.material); });
+  for (const m of ALL_MATS) m.userData.base = { transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite };
+
+  const box = new THREE.Box3().setFromObject(model);
+  if (box.isEmpty()) { specError('el modelo no tiene piezas visibles'); box.set(V([-500, 0, -500]), V([500, 1000, 500])); }
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const R = Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 1);
+
+  // Luces
+  scene.add(new THREE.HemisphereLight(0xf8fafc, 0x475569, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+  sun.position.copy(center).add(V([0.6, 1.4, 0.8]).normalize().multiplyScalar(R * 4));
+  sun.target.position.copy(center);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(COARSE ? 1024 : 2048, COARSE ? 1024 : 2048);
+  Object.assign(sun.shadow.camera, { left: -R * 1.6, right: R * 1.6, top: R * 1.6, bottom: -R * 1.6, near: R, far: R * 8 });
+  sun.shadow.normalBias = R * 0.002;
+  scene.add(sun, sun.target);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+  fill.position.copy(center).add(V([-1, 0.5, -0.8]).multiplyScalar(R * 4));
+  scene.add(fill);
+
+  // Suelo: sombra, cuadrícula y rosa
+  const step = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000].find((s) => (R * 2.6) / s <= 40) ?? 5000;
+  const gridSize = Math.ceil((R * 2.6) / step) * step;
+  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(gridSize * 1.5, gridSize * 1.5), new THREE.ShadowMaterial({ opacity: 0.22 }));
+  shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.set(center.x, box.min.y, center.z); shadowPlane.receiveShadow = true;
+  builtin.suelo.add(shadowPlane);
+  let grid = null, rose = null;
+  function buildGround() {
+    if (grid) { builtin.suelo.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+    grid = new THREE.GridHelper(gridSize, gridSize / step, new THREE.Color(tok('--grid-major')), new THREE.Color(tok('--grid-minor')));
+    grid.position.set(center.x, box.min.y + R * 0.0005, center.z);
+    grid.material.transparent = true; grid.material.opacity = 0.75; grid.material.depthWrite = false;
+    builtin.suelo.add(grid);
+    if (rose) { builtin.suelo.remove(rose); rose.material.map.dispose(); rose.material.dispose(); }
+    const S = 1024, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const g = cv.getContext('2d'); const c = S / 2, ring = S * 0.36;
+    g.strokeStyle = tok('--muted'); g.lineWidth = 3; g.globalAlpha = 0.8;
+    g.beginPath(); g.arc(c, c, ring, 0, Math.PI * 2); g.stroke();
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const marks = cardinal
+      ? ['N', 'E', 'S', 'O'].map((k) => ({ t: k, v: headingVec(HEAD[k]), main: k === 'N' }))
+      : [{ t: 'FRENTE', v: V([0, 0, 1]), main: true }, { t: 'ATRÁS', v: V([0, 0, -1]) }, { t: 'IZQ', v: V([-1, 0, 0]) }, { t: 'DER', v: V([1, 0, 0]) }];
+    for (const m of marks) {
+      const x = c + m.v.x * ring, y = c + m.v.z * ring;
+      g.globalAlpha = 1; g.fillStyle = m.main ? tok('--danger') : tok('--muted');
+      g.beginPath(); g.moveTo(c + m.v.x * (ring + 30), c + m.v.z * (ring + 30));
+      g.lineTo(c + m.v.x * (ring - 22) - m.v.z * 14, c + m.v.z * (ring - 22) + m.v.x * 14);
+      g.lineTo(c + m.v.x * (ring - 22) + m.v.z * 14, c + m.v.z * (ring - 22) - m.v.x * 14); g.fill();
+      g.font = `700 ${m.t.length > 1 ? 44 : 72}px system-ui, sans-serif`;
+      g.fillText(m.t, x + m.v.x * 80, y + m.v.z * 80);
+    }
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const roseSize = Math.hypot(size.x, size.z) * 0.62 / 0.36 + R * 0.2;
+    rose = new THREE.Mesh(new THREE.PlaneGeometry(roseSize, roseSize), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+    rose.rotation.x = -Math.PI / 2; rose.position.set(center.x, box.min.y + R * 0.001, center.z); rose.raycast = () => {};
+    builtin.suelo.add(rose);
+  }
+  buildGround();
+
+  // Escala de referencia
+  const LBL = [];
+  function tag(text, pos, cls = 'tag-lbl', parent = builtin.escala) {
+    const el = document.createElement('div'); el.className = cls; el.textContent = text;
+    const o = new CSS2DObject(el); o.position.copy(pos); parent.add(o); LBL.push(o); return o;
+  }
+  let escala = SPEC.escala ?? 'auto';
+  if (escala === 'auto') escala = Math.max(size.x, size.y, size.z) >= 600 ? 'humano' : 'tarjeta';
+  const refMat = getMat('referencia');
+  if (escala === 'humano') {
+    const h = new THREE.Group();
+    const cap = (r, total, x, y) => { const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, total - 2 * r, 6, 16), refMat); m.position.set(x, y, 0); m.castShadow = true; h.add(m); };
+    cap(58, 880, -80, 440); cap(58, 880, 80, 440);
+    cap(140, 600, 0, 1180);
+    cap(42, 660, -190, 1140); cap(42, 660, 190, 1140);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(105, 24, 16), refMat); head.position.y = 1645; head.castShadow = true; h.add(head);
+    h.position.set(box.max.x + 450, box.min.y, box.min.z + Math.min(size.z * 0.25, 300)); // atrás a la derecha: no tapa la vista isométrica
+    builtin.escala.add(h);
+    tag('Persona 1.75 m', h.position.clone().add(V([0, 1850, 0])));
+  } else if (escala === 'tarjeta') {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(85.6, 0.8, 54), refMat);
+    t.position.set(box.max.x + R * 0.35 + 42.8, box.min.y + 0.4, box.min.z + 27); t.castShadow = true; // atrás a la derecha, lejos de las cotas
+    builtin.escala.add(t);
+    tag('Tarjeta 85.6 × 54 mm', t.position.clone().add(V([0, 14, 0])));
+  } else if (escala !== 'ninguna') specError(`escala debe ser 'auto', 'humano', 'tarjeta' o 'ninguna'`);
+
+  // Cotas
+  const cotaMat = new THREE.LineBasicMaterial({ color: tok('--cota'), depthTest: false, transparent: true });
+  function cota(a, b, texto, ext = V([0, 0, 0])) {
+    const a2 = a.clone().add(ext), b2 = b.clone().add(ext);
+    const dir = b2.clone().sub(a2).normalize();
+    let perp = ext.lengthSq() > 0 ? ext.clone().normalize() : new THREE.Vector3().crossVectors(dir, Math.abs(dir.y) > 0.9 ? V([1, 0, 0]) : UP).normalize();
+    const tick = R * 0.025, over = perp.clone().multiplyScalar(tick);
+    const segs = [a2, b2,
+      a2.clone().sub(over), a2.clone().add(over), b2.clone().sub(over), b2.clone().add(over)];
+    if (ext.lengthSq() > 0) segs.push(a, a2.clone().add(over), b, b2.clone().add(over));
+    const line = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segs), cotaMat);
+    line.renderOrder = 999; line.raycast = () => {}; builtin.cotas.add(line);
+    tag(texto ?? fmtLen(a.distanceTo(b)), a2.clone().add(b2).multiplyScalar(0.5), 'cota-lbl', builtin.cotas);
+  }
+  if (SPEC.cotasGlobales !== false) {
+    const capa = SPEC.cotasGlobales?.capa;
+    const B = capa && layers.has(capa) ? new THREE.Box3().setFromObject(layers.get(capa)) : box;
+    if (capa && !layers.has(capa)) specError(`cotasGlobales.capa «${capa}» no existe`);
+    const off = R * 0.12;
+    cota(V([B.min.x, B.min.y, B.max.z]), V([B.max.x, B.min.y, B.max.z]), null, V([0, 0, off]));
+    cota(V([B.max.x, B.min.y, B.min.z]), V([B.max.x, B.min.y, B.max.z]), null, V([off, 0, 0]));
+    cota(V([B.max.x, B.min.y, B.max.z]), V([B.max.x, B.max.y, B.max.z]), null, V([off * 0.7, 0, off * 0.7]));
+  }
+  for (const c of SPEC.cotas ?? []) {
+    const P = pts({ nombre: 'cota' }, 'de/a', 2, [c.de, c.a]);
+    if (P) cota(P[0], P[1], c.texto, V(c.desplazar));
+  }
+  for (const e of SPEC.etiquetas ?? []) {
+    const parent = e.capa ? layers.get(e.capa) : builtin.cotas;
+    if (!parent) { specError(`etiqueta «${e.texto}»: capa «${e.capa}» no existe`); continue; }
+    const P = pts({ nombre: `etiqueta ${e.texto}` }, 'en', 1, [e.en]);
+    if (P) tag(e.texto, P[0], 'tag-lbl', parent);
+  }
+
+  // Cámara y controles
+  const camera = new THREE.PerspectiveCamera(40, 1, R / 200, R * 60);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.minDistance = R * 0.05; controls.maxDistance = R * 12;
+  controls.maxPolarAngle = Math.PI / 2 + 0.08;
+  controls.autoRotateSpeed = 1.2;
+  controls.target.copy(center);
+
+  let needs = true; const dirty = () => { needs = true; };
+  controls.addEventListener('change', dirty);
+
+  function insets() {
+    const open = !panel.hidden, pr = panel.getBoundingClientRect();
+    return { top: bar.getBoundingClientRect().height, left: !MOBILE() && open ? pr.right : 0, bottom: MOBILE() && open ? pr.height : 0 };
+  }
+  function frame() {
+    const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); labels.setSize(w, h);
+    const i = insets();
+    camera.setViewOffset(w, h, -i.left / 2, -(i.top - i.bottom) / 2, w, h);
+    camera.updateProjectionMatrix(); dirty();
+  }
+  // Distancia para que las 8 esquinas de la caja b entren en el área libre (sin panel ni barra).
+  function fitDistance(dir, b) {
+    const w = stage.clientWidth, h = stage.clientHeight, i = insets();
+    const aspect = Math.max(w - i.left, 1) / Math.max(h - i.top - i.bottom, 1);
+    const c = b.getCenter(new THREE.Vector3()), r = b.getBoundingSphere(new THREE.Sphere()).radius;
+    const v = camera.fov * DEG, hz = 2 * Math.atan(Math.tan(v / 2) * aspect);
+    const cam = new THREE.PerspectiveCamera(camera.fov, aspect, r / 100, r * 100);
+    const corners = [];
+    for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) corners.push(V([x, y, z]));
+    let D = r / Math.sin(Math.min(v, hz) / 2);
+    for (let k = 0; k < 4; k++) {
+      cam.position.copy(c).addScaledVector(dir, D); cam.lookAt(c); cam.updateMatrixWorld();
+      let m = 0; for (const p of corners) { const q = p.clone().project(cam); m = Math.max(m, Math.abs(q.x), Math.abs(q.y)); }
+      D = Math.max(D * m / 0.86, r * 1.02);
+    }
+    return D;
+  }
+  let tween = null;
+  function flyTo(pos, target) {
+    if (REDUCED) { camera.position.copy(pos); controls.target.copy(target); controls.update(); dirty(); return; }
+    tween = { t0: performance.now(), p0: camera.position.clone(), p1: pos, q0: controls.target.clone(), q1: target };
+  }
+  function view(key, instant = false) {
+    const v = (Array.isArray(key) ? V(key) : VIEWS[key]?.v ?? key).clone().normalize();
+    const vb = new THREE.Box3().setFromObject(model).union(new THREE.Box3().setFromObject(builtin.escala)); // incluye la explosión actual
+    const vc = vb.getCenter(new THREE.Vector3()), pos = vc.clone().addScaledVector(v, fitDistance(v, vb));
+    if (instant) { camera.position.copy(pos); controls.target.copy(vc); controls.update(); dirty(); } else flyTo(pos, vc);
+  }
+
+  // Gizmo de orientación (se dibuja en el mismo canvas, en la esquina)
+  const gScene = new THREE.Scene(), gCam = new THREE.OrthographicCamera(-1.55, 1.55, 1.55, -1.55, 0.1, 10);
+  const gTargets = [];
+  function badge(text, bg, fg, px = 128) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = px; const g = cv.getContext('2d');
+    g.fillStyle = bg; g.beginPath(); g.arc(px / 2, px / 2, px / 2 - 4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = fg; g.font = `700 ${text.length > 1 ? 44 : 64}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, px / 2, px / 2 + 3);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  function buildGizmo() {
+    for (const o of [...gScene.children]) { gScene.remove(o); o.material?.map?.dispose(); o.material?.dispose(); o.geometry?.dispose(); }
+    gTargets.length = 0;
+    const back = new THREE.Sprite(new THREE.SpriteMaterial({ map: badge('', tok('--cota-bg'), '#000', 256), depthTest: false, depthWrite: false }));
+    back.scale.setScalar(3.05); back.renderOrder = -1; back.raycast = () => {}; gScene.add(back);
+    const items = cardinal
+      ? ['N', 'E', 'S', 'O'].map((k) => ({ t: k, v: headingVec(HEAD[k]), main: k === 'N' }))
+      : [{ t: 'F', v: V([0, 0, 1]), main: true }, { t: 'A', v: V([0, 0, -1]) }, { t: 'I', v: V([-1, 0, 0]) }, { t: 'D', v: V([1, 0, 0]) }];
+    items.push({ t: '▲', v: V([0, 1, 0.0001]) });
+    for (const it of items) {
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V([0, 0, 0]), it.v.clone().multiplyScalar(0.72)]),
+        new THREE.LineBasicMaterial({ color: it.main ? tok('--danger') : tok('--muted') }));
+      gScene.add(line);
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: badge(it.t, it.main ? tok('--danger') : tok('--grid-major'), '#ffffff') }));
+      s.position.copy(it.v).multiplyScalar(1.02); s.scale.setScalar(0.62); s.userData.v = it.v; gScene.add(s); gTargets.push(s);
+    }
+  }
+  buildGizmo();
+  const gizmoEl = $('#gizmo');
+  function renderGizmo() {
+    const r = gizmoEl.getBoundingClientRect(), h = stage.clientHeight;
+    gCam.quaternion.copy(camera.quaternion);
+    gCam.position.set(0, 0, 4).applyQuaternion(camera.quaternion);
+    renderer.clearDepth();
+    renderer.setScissorTest(true);
+    renderer.setScissor(r.left, h - r.bottom, r.width, r.height); renderer.setViewport(r.left, h - r.bottom, r.width, r.height);
+    renderer.render(gScene, gCam);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, stage.clientWidth, h);
+  }
+  const ray = new THREE.Raycaster();
+  gizmoEl.addEventListener('click', (e) => {
+    const r = gizmoEl.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), gCam);
+    const hit = ray.intersectObjects(gTargets)[0];
+    if (hit) view(hit.object.userData.v.clone().add(V([0, hit.object.userData.v.y ? 0 : 0.08, 0])));
+  });
+  gizmoEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); view('iso'); } });
+
+  function render() {
+    renderer.setViewport(0, 0, stage.clientWidth, stage.clientHeight);
+    renderer.render(scene, camera);
+    labels.render(scene, camera);
+    renderGizmo();
+  }
+
+  // Selección, resaltado y ficha
+  const HL = new Map(); let lit = null, hovered = null, selected = null;
+  const hlMat = (m) => {
+    let h = HL.get(m);
+    if (!h) { h = m.clone(); h.emissive = new THREE.Color(tok('--accent')); h.emissiveIntensity = 0.45; HL.set(m, h); }
+    return h;
+  };
+  function light(info) {
+    if (lit?.info === info) return;
+    if (lit) for (const [o, m] of lit.saved) o.material = m;
+    lit = null;
+    if (info) { const saved = []; info.root.traverse((o) => { if (o.isMesh) { saved.push([o, o.material]); o.material = hlMat(o.material); } }); lit = { info, saved }; }
+    dirty();
+  }
+  const refresh = () => light(hovered ?? selected);
+  const capaNombre = (id) => (SPEC.capas ?? []).find((c) => c.id === id)?.nombre ?? id;
+  function showFicha(info) {
+    const f = $('#ficha');
+    if (!info) { f.hidden = true; return; }
+    $('#ficha-nombre').textContent = info.nombre;
+    const rows = [['Capa', capaNombre(info.capa)], ['Material', info.materiales], ['Medidas', info.dims], ['Nota', info.nota], ['Id', info.p.id ?? '']];
+    $('#ficha-datos').innerHTML = rows.filter((r) => r[1]).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+    f.hidden = false;
+  }
+  function select(info) { selected = info; refresh(); showFicha(info); }
+  function visibleDeep(o) { for (; o; o = o.parent) if (!o.visible) return false; return true; }
+  function pick(x, y) {
+    const r = renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
+    for (const h of ray.intersectObject(model, true)) if (h.object.isMesh && visibleDeep(h.object) && h.object.userData.info) return h.object.userData.info;
+    return null;
+  }
+  let down = null;
+  renderer.domElement.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    if (!down) return;
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t; down = null;
+    if (moved < 6 && dt < 500) select(pick(e.clientX, e.clientY));
+  });
+  let hoverQ = null;
+  renderer.domElement.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' || e.buttons) return;
+    hoverQ = [e.clientX, e.clientY];
+  });
+  renderer.domElement.addEventListener('pointerleave', () => { hovered = null; refresh(); });
+  $('#ficha-cerrar').addEventListener('click', () => select(null));
+  $('#ficha-enfocar').addEventListener('click', () => {
+    if (!selected) return;
+    const b = new THREE.Box3().setFromObject(selected.root), c = b.getCenter(new THREE.Vector3());
+    b.expandByScalar(R * 0.03);
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    flyTo(c.clone().addScaledVector(dir, fitDistance(dir, b) * 1.3), c);
+  });
+
+  // Modos y explosión
+  function setMode(mode) {
+    const keep = lit?.info; light(null); HL.clear();
+    for (const m of ALL_MATS) {
+      const b = m.userData.base;
+      m.wireframe = mode === 'alambre';
+      if (mode === 'rayos') { m.transparent = true; m.opacity = Math.min(b.opacity, 0.22); m.depthWrite = false; }
+      else { m.transparent = b.transparent; m.opacity = b.opacity; m.depthWrite = b.depthWrite; }
+      m.needsUpdate = true;
+    }
+    light(keep);
+    document.querySelectorAll('#modos .btn').forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.modo === mode)));
+  }
+  document.querySelectorAll('#modos .btn').forEach((btn) => btn.addEventListener('click', () => setMode(btn.dataset.modo)));
+  const explodables = INFOS.filter((i) => i.p.explota);
+  const explode = (t) => { for (const i of explodables) i.root.position.copy(i.root.userData.base).addScaledVector(V(i.p.explota), t); dirty(); };
+  if (explodables.length) {
+    $('#explota-box').hidden = false;
+    const t0 = Math.min(Math.max(SPEC.explosionInicial ?? 0, 0), 1);
+    $('#explota').value = Math.round(t0 * 100); explode(t0);
+    $('#explota').addEventListener('input', (e) => explode(e.target.value / 100));
+  }
+
+  // Panel: vistas, capas, avisos, piezas
+  const vistas = $('#vistas');
+  for (const [k, v] of Object.entries(VIEWS)) {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = v.nombre; b.addEventListener('click', () => view(k)); vistas.appendChild(b);
+  }
+  const rot = document.createElement('button'); rot.className = 'btn'; rot.textContent = 'Auto-giro'; rot.setAttribute('aria-pressed', 'false');
+  rot.addEventListener('click', () => { controls.autoRotate = !controls.autoRotate; rot.setAttribute('aria-pressed', String(controls.autoRotate)); dirty(); });
+  vistas.appendChild(rot);
+
+  const capasEl = $('#capas');
+  const addLayer = (id, nombre, color, count, group) => {
+    const l = document.createElement('label'); l.className = 'layer';
+    l.innerHTML = `<input type="checkbox" checked><span class="sw" style="background:${esc(color)}"></span><span>${esc(nombre)}</span><span class="n">${count ?? ''}</span>`;
+    l.querySelector('input').addEventListener('change', (e) => { group.visible = e.target.checked; if (selected && !visibleDeep(selected.root)) select(null); dirty(); });
+    capasEl.appendChild(l);
+  };
+  for (const [id, g] of layers) {
+    const decl = (SPEC.capas ?? []).find((c) => c.id === id);
+    const first = TOP.find((i) => i.capa === id);
+    const color = decl?.color ?? (first ? '#' + getMat(first.material).color.getHexString(THREE.SRGBColorSpace) : '#888');
+    addLayer(id, decl?.nombre ?? id, color, TOP.filter((i) => i.capa === id).length, g);
+  }
+  addLayer('cotas', 'Cotas', tok('--cota'), null, builtin.cotas);
+  if (escala !== 'ninguna') addLayer('escala', escala === 'humano' ? 'Persona (escala)' : 'Tarjeta (escala)', '#94a3b8', null, builtin.escala);
+  addLayer('suelo', `Suelo · cuadrícula ${fmtLen(step)}`, tok('--grid-major'), null, builtin.suelo);
+
+  if ((SPEC.avisos ?? []).length) {
+    $('#avisos-box').hidden = false;
+    $('#avisos').innerHTML = SPEC.avisos.map((a) => `<div class="aviso ${esc(a.nivel ?? 'info')}"><strong>${esc(a.titulo ?? '')}</strong>${esc(a.texto ?? '')}</div>`).join('');
+  }
+  const lista = $('#piezas');
+  for (const [id] of layers) {
+    const items = TOP.filter((i) => i.capa === id); if (!items.length) continue;
+    const h = document.createElement('li'); h.className = 'grupo'; h.textContent = `${capaNombre(id)} (${items.length})`; lista.appendChild(h);
+    for (const info of items) {
+      const li = document.createElement('li'), b = document.createElement('button');
+      b.innerHTML = `<span>${esc(info.nombre)}</span><small>${esc(info.dims)}</small>`;
+      b.addEventListener('click', () => select(info)); li.appendChild(b); lista.appendChild(li);
+    }
+  }
+  $('#hint').textContent = COARSE
+    ? '1 dedo: girar · 2 dedos: mover y zoom · Toque en una pieza: ficha.'
+    : 'Arrastrar: girar · Clic der. o Shift: mover · Rueda: zoom · Clic en una pieza: ficha.';
+
+  // Barra: panel, vista inicial, tema, PNG
+  const bPanel = $('#b-panel');
+  const setPanel = (open) => { panel.hidden = !open; bPanel.setAttribute('aria-pressed', String(open)); frame(); };
+  setPanel(!MOBILE());
+  bPanel.addEventListener('click', () => setPanel(panel.hidden));
+  $('#b-reset').addEventListener('click', () => view(SPEC.vistaInicial ?? 'iso'));
+  function applyTheme(t, persist = true) {
+    document.documentElement.dataset.theme = t;
+    if (persist) try { localStorage.setItem('gemelo3d-tema', t); } catch { /* sin almacenamiento: tema solo por sesión */ }
+    scene.background.set(tok('--scene-bg')); cotaMat.color.set(tok('--cota'));
+    buildGround(); buildGizmo(); HL.clear(); const keep = lit?.info; light(null); light(keep); dirty();
+  }
+  $('#b-tema').addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'));
+
+  function snapshot() {
+    render();
+    const src = renderer.domElement, dpr = renderer.getPixelRatio();
+    const cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height;
+    const g = cv.getContext('2d'); g.drawImage(src, 0, 0);
+    g.font = `700 ${11 * dpr}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const p = new THREE.Vector3();
+    for (const o of LBL) {
+      if (!visibleDeep(o)) continue;
+      o.getWorldPosition(p).project(camera); if (p.z < -1 || p.z > 1) continue;
+      const x = ((p.x + 1) / 2) * cv.width, y = ((1 - p.y) / 2) * cv.height, t = o.element.textContent;
+      const w = g.measureText(t).width + 12 * dpr, h = 18 * dpr, isCota = o.element.className === 'cota-lbl';
+      g.fillStyle = tok('--cota-bg'); g.strokeStyle = isCota ? tok('--cota') : tok('--border');
+      g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - h / 2, w, h, 5 * dpr) : g.rect(x - w / 2, y - h / 2, w, h); g.fill(); g.stroke();
+      g.fillStyle = isCota ? tok('--cota') : tok('--tag'); g.fillText(t, x, y + dpr);
+    }
+    g.textAlign = 'left'; g.font = `600 ${13 * dpr}px system-ui, sans-serif`; g.fillStyle = tok('--muted');
+    g.fillText(`${SPEC.titulo ?? ''} · ${new Date().toISOString().slice(0, 10)}`, 14 * dpr, cv.height - 16 * dpr);
+    return cv.toDataURL('image/png');
+  }
+  const slug = (SPEC.titulo ?? 'gemelo-3d').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  $('#b-png').addEventListener('click', () => {
+    try { const a = document.createElement('a'); a.href = snapshot(); a.download = `${slug}.png`; document.body.appendChild(a); a.click(); a.remove(); }
+    catch (e) { console.warn('No se pudo generar el PNG:', e); }
+  });
+  let themeBeforePrint = null;
+  addEventListener('beforeprint', () => {
+    themeBeforePrint = document.documentElement.dataset.theme;
+    if (themeBeforePrint !== 'light') applyTheme('light', false);
+    const rows = TOP.map((i) => `<tr><td>${esc(i.nombre)}</td><td>${esc(capaNombre(i.capa))}</td><td>${esc(i.dims)}</td><td>${esc(i.nota)}</td></tr>`).join('');
+    $('#print-sheet').innerHTML = `<h1>${esc(SPEC.titulo ?? '')}</h1><p>${esc(SPEC.subtitulo ?? '')}</p><img alt="" src="${snapshot()}">`
+      + (SPEC.avisos ?? []).map((a) => `<p><strong>${esc(a.titulo ?? '')}:</strong> ${esc(a.texto ?? '')}</p>`).join('')
+      + `<table><thead><tr><th>Pieza</th><th>Capa</th><th>Medidas</th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table>`;
+  });
+  addEventListener('afterprint', () => { if (themeBeforePrint && themeBeforePrint !== 'light') applyTheme(themeBeforePrint, false); });
+
+  // Errores del SPEC visibles para quien abra el archivo
+  if (viewer.errores.length) {
+    const el = $('#errores'); el.hidden = false;
+    el.innerHTML = `<strong>⚠ ${viewer.errores.length} error(es) en el SPEC</strong><ul>${viewer.errores.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>`;
+  }
+
+  // Autoprueba para scripts/verify.mjs
+  viewer.snapshot = snapshot;
+  viewer.selfTest = () => {
+    const W = 160, H = 120, rt = new THREE.WebGLRenderTarget(W, H);
+    const cam = new THREE.PerspectiveCamera(40, W / H, R / 200, R * 60);
+    const dist = R / Math.sin(Math.min(40 * DEG, 2 * Math.atan(Math.tan(20 * DEG) * W / H)) / 2);
+    cam.position.copy(center).add(VIEWS.iso.v.clone().normalize().multiplyScalar(dist)); cam.lookAt(center);
+    const bg = scene.background, vis = Object.values(builtin).map((g) => g.visible);
+    scene.background = null; Object.values(builtin).forEach((g) => (g.visible = false));
+    const prevClear = renderer.getClearAlpha();
+    renderer.setRenderTarget(rt); renderer.setClearAlpha(0); renderer.clear(); renderer.render(scene, cam);
+    const px = new Uint8Array(W * H * 4); renderer.readRenderTargetPixels(rt, 0, 0, W, H, px);
+    renderer.setRenderTarget(null); renderer.setClearAlpha(prevClear);
+    scene.background = bg; Object.values(builtin).forEach((g, i) => (g.visible = vis[i])); rt.dispose(); dirty();
+    let n = 0; for (let i = 3; i < px.length; i += 4) if (px[i] > 0) n++;
+    const cobertura = n / (W * H);
+    return {
+      ok: viewer.errores.length === 0 && TOP.length === specParts.length && cobertura >= 0.02,
+      three: THREE.REVISION, webgl2: renderer.capabilities.isWebGL2,
+      piezas: TOP.length, esperadas: specParts.length, errores: [...viewer.errores],
+      cobertura: Math.round(cobertura * 1000) / 1000, triangulos: renderer.info.render.triangles,
+      medidas: `${fmtNum(size.x)} × ${fmtNum(size.y)} × ${fmtNum(size.z)} mm`,
+    };
+  };
+
+  // Bucle: solo redibuja cuando algo cambió
+  new ResizeObserver(frame).observe(stage);
+  addEventListener('resize', frame);
+  frame();
+  view(SPEC.vistaInicial ?? 'iso', true);
+  let hintHidden = false;
+  controls.addEventListener('start', () => { if (!hintHidden) { hintHidden = true; $('#hint').style.opacity = '0.6'; } });
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (tween) {
+      const k = Math.min(1, (now - tween.t0) / 500), e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.q0, tween.q1, e);
+      if (k === 1) tween = null; dirty();
+    }
+    if (hoverQ) { const h = pick(...hoverQ); hoverQ = null; if (h !== hovered) { hovered = h; refresh(); } }
+    controls.update();
+    if (!needs) return;
+    needs = false; render();
+  }
+  render();
+  viewer.ready = true;
+  const f = $('#fallo'); if (f.dataset.tipo === 'carga') f.hidden = true;
+  requestAnimationFrame(loop);
+}
+
+try { main(); } catch (e) {
+  console.error(e);
+  fail('motor', `<h2>El visor falló al iniciar</h2><p>${esc(e.message)}</p>`);
+}
+</script>
+</body>
+</html>

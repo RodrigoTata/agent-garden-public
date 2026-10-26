@@ -1,0 +1,81 @@
+AgentGarden
+Copyright 2026 Rodrigo González
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Some skills in this repository are adapted from third-party open-source
+projects. Each adapted skill names its upstream author, source and license in
+the `metadata` block of its SKILL.md frontmatter. Original copyright and
+license notices are reproduced below as required by those licenses.
+Skills adapted from MIT-licensed projects keep the MIT license
+(`license: MIT` in their frontmatter); everything else is Apache-2.0.
+
+--------------------------------------------------------------------------
+mattpocock/skills — https://github.com/mattpocock/skills
+Licensed under the MIT License. Adapted skills:
+  ask-matt (skills-to-review), code-review, codebase-design, diagnosing-bugs,
+  domain-modeling, grill-with-docs, grilling, grill-me-rg (derived from
+  grill-me), handoff, improve-codebase-architecture, research, tdd, teach,
+  to-spec, to-tickets, wayfinder
+
+MIT License
+
+Copyright (c) 2026 Matt Pocock
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------
+img2threejs — https://github.com/img2threejs/img2threejs
+Copyright 2026 hoainho
+Licensed under the Apache License, Version 2.0. Included as the `three-js`
+skill; its own LICENSE file is kept at .agents/skills/three-js/LICENSE.
+
+--------------------------------------------------------------------------
+REA (Reverse Engineer Anything) — https://github.com/morluto/rea
+Licensed under the MIT License. Included as the `rea` skill, adapted from the
+upstream project's agent skill and documentation.
+
+Per the upstream author: third-party material retains its own licenses and
+copyright notices; REA grants no license, key or activation entitlement for
+commercial tools (IDA Pro / Hex-Rays, Hopper, JEB and similar), which you must
+obtain and be authorized to use under their own licenses; cracked copies,
+stolen or shared keys and bypassing license restrictions are not authorized;
+and this guidance does not amend the MIT or any third-party license.
+
+MIT License
+
+Copyright (c) 2026 morluto
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

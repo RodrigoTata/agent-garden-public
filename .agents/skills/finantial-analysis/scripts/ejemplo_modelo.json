@@ -1,0 +1,78 @@
+{
+  "titulo": "Ejemplo — tres ideas compitiendo por el mismo capital",
+  "moneda": "CLP",
+  "horizonte_meses": 36,
+  "tasa_descuento_anual": 0.14,
+  "tasa_impuesto": 0.125,
+  "valor_hora_fundador": 9000,
+  "capital_disponible": 6000000,
+  "perdida_maxima_tolerable": 3500000,
+  "horas_disponibles_mes": 60,
+  "criterio_ranking": "valor_esperado",
+  "candidatas": [
+    {
+      "id": "A",
+      "nombre": "Importación de consolas desde Japón",
+      "horas_fundador_mes": 45,
+      "p_exito": 0.65,
+      "mes_corte": 3,
+      "recupero_fallo": 0.7,
+      "puntuales": [
+        {"concepto": "Lote piloto (landed cost)", "mes": 0, "monto": -2800000, "tipo": "capex"},
+        {"concepto": "Segundo lote (tras validar piloto)", "mes": 4, "monto": -3000000, "tipo": "capex"}
+      ],
+      "lineas_ingreso": [
+        {"concepto": "Venta consolas (neto sin IVA)", "modo": "transaccional", "unidades_mes": 8,
+         "crecimiento_mensual": 0.06, "tope_unidades": 40, "mes_inicio": 1,
+         "precio": 210000, "costo_variable": 150000}
+      ],
+      "costos_fijos": [
+        {"concepto": "Marketing + plataforma", "monto_mes": 250000, "mes_inicio": 1}
+      ],
+      "valor_terminal": 0
+    },
+    {
+      "id": "B",
+      "nombre": "SaaS de reservas para peluquerías",
+      "horas_fundador_mes": 55,
+      "p_exito": 0.35,
+      "mes_corte": 6,
+      "recupero_fallo": 0.0,
+      "puntuales": [
+        {"concepto": "Desarrollo MVP (MKI)", "mes": 0, "monto": -1500000, "tipo": "capex"},
+        {"concepto": "Integración pagos (MKII)", "mes": 7, "monto": -1200000, "tipo": "capex"}
+      ],
+      "lineas_ingreso": [
+        {"concepto": "Suscripción mensual", "modo": "recurrente", "altas_mes": 3,
+         "crecimiento_mensual": 0.06, "tope_unidades": 12, "churn_mensual": 0.07, "mes_inicio": 2,
+         "precio": 19990, "costo_variable": 2500, "cac": 60000}
+      ],
+      "costos_fijos": [
+        {"concepto": "Hosting + herramientas", "monto_mes": 90000, "mes_inicio": 1},
+        {"concepto": "Soporte part-time", "monto_mes": 350000, "mes_inicio": 9}
+      ],
+      "rangos": {"volumen": [0.4, 1.6], "churn": [2.0, 0.7]},
+      "valor_terminal": 0
+    },
+    {
+      "id": "C",
+      "nombre": "Mantención de huertos urbanos a domicilio",
+      "horas_fundador_mes": 70,
+      "p_exito": 0.75,
+      "mes_corte": 2,
+      "recupero_fallo": 0.5,
+      "puntuales": [
+        {"concepto": "Herramientas + vehículo usado", "mes": 0, "monto": -1800000, "tipo": "capex"}
+      ],
+      "lineas_ingreso": [
+        {"concepto": "Visitas de mantención", "modo": "transaccional", "unidades_mes": 20,
+         "crecimiento_mensual": 0.04, "tope_unidades": 60, "mes_inicio": 1,
+         "precio": 35000, "costo_variable": 9000}
+      ],
+      "costos_fijos": [
+        {"concepto": "Combustible base + seguro", "monto_mes": 120000, "mes_inicio": 1}
+      ],
+      "valor_terminal": 0
+    }
+  ]
+}
